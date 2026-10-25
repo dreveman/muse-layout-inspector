@@ -60,6 +60,7 @@ git -C "$repo_root" archive HEAD -- \
   | tar -x -C "$dest"
 
 sed "s/__ARTIFACT_SLUG__/$slug/g" "$dest/space.json.template" > "$dest/space.json"
+sed -i "s/__ARTIFACT_SLUG__/$slug/g" "$dest/client/index.html"
 
 if [[ -n "$BACKUP_DIR" ]]; then
   cp "$BACKUP_DIR/app.db" "$dest/app.db"
@@ -74,6 +75,11 @@ for f in space.json space.json.template package.json client server drizzle; do
 done
 if ! grep -q "\"slug\": \"$slug\"" "$dest/space.json"; then
   echo "error: generated space.json does not carry slug \"$slug\"" >&2
+  exit 1
+fi
+
+if ! grep -q "data-generated-space-slug=\"$slug\"" "$dest/client/index.html"; then
+  echo "error: staged client/index.html does not carry the generated-space marker for slug \"$slug\"" >&2
   exit 1
 fi
 
