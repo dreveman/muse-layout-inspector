@@ -448,7 +448,7 @@ export function App() {
 
           {m.twsaBottom > 0 && (
             <div className="boundary-band band-safe-bottom" style={{ height: `${m.twsaBottom}px` }}>
-              <span>env(safe-area-inset-bottom): {m.twsaBottom}px</span>
+              <span>--twsa-safe-area-inset-bottom: {m.twsaBottom}px</span>
             </div>
           )}
 
