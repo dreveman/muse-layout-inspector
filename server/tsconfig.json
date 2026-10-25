@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2022", "DOM"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "resolveJsonModule": true,
+    "tsBuildInfoFile": "./.tsbuildinfo.server"
+  },
+  "include": ["src/**/*"]
+}

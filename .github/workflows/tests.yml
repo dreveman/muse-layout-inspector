@@ -1,0 +1,58 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Node tests
+        run: node --test client/src/*.test.mjs
+
+  typecheck:
+    runs-on: ubuntu-latest
+    env:
+      SDK_TARBALL_SHA256: "b95319b057ddff52b1feae872bb561bea6aeb920fa543939b61d038d11a50563"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check R2 configuration
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          missing=()
+          [ -n "$R2_ACCOUNT_ID" ] || missing+=(R2_ACCOUNT_ID)
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing+=(CLOUDFLARE_API_TOKEN)
+          if ((${#missing[@]})); then
+            echo "::error::Missing repository secrets: ${missing[*]} — add them under Settings → Secrets and variables → Actions → Repository secrets."
+            exit 1
+          fi
+      - name: Fetch the space SDK tarball from R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          R2_BUCKET: ${{ vars.R2_BUCKET || secrets.R2_BUCKET }}
+        run: |
+          bucket="${R2_BUCKET:-muse-ci}"
+          curl -fsSL -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$R2_ACCOUNT_ID/r2/buckets/$bucket/objects/space-sdk.tgz" \
+            -o /tmp/space-sdk.tgz
+          echo "$SDK_TARBALL_SHA256  /tmp/space-sdk.tgz" | sha256sum -c -
+          sudo mkdir -p /opt/hatch/skills/spaces/ts-runtime/dist
+          sudo cp /tmp/space-sdk.tgz /opt/hatch/skills/spaces/ts-runtime/dist/space-sdk.tgz
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - name: Install root dependencies
+        run: bun install
+      - name: Typecheck
+        run: bun run typecheck && bun run typecheck:dev
+      - name: Node tests
+        run: node --test client/src/*.test.mjs
